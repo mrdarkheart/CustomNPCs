@@ -1,0 +1,155 @@
+var days =
+[
+'Monday',
+'Tuesday',
+'Wednesday',
+'Thursday',
+'Friday',
+'Saturday',
+'Sunday'
+];
+
+var months =
+[
+'January',
+'February',
+'March',
+'April',
+'May',
+'June',
+'July',
+'August',
+'September',
+'October',
+'November',
+'December',
+];
+var d =
+[
+'31', //+31 days
+'59', //+28 days (no leap years currently implemented)
+'90', //+31 days
+'120',//+30 days
+'151',//+31 days
+'181',//+30 days
+'212',//+31 days
+'243',//+31 days
+'273',//+30 days
+'304',//+31 days
+'334',//+30 days
+'365' //+31 days
+];
+
+var datetime=0;
+
+var time=0;
+var minutes=0;
+var hours=0;
+var day=0;
+var day_of_week=0;
+var day_name=0;
+var week=0;
+var day_of_year=0;
+var year=0;
+
+var month=0;
+var day_of_month=0;
+var month_name=0;
+
+var mm=0;
+var hh=0;
+
+//have we announced the time already? if we don't check for
+//this variable, you might see the message popping up twice.
+//why? it's because when you divide 1000 by 60, you get some rounding errors. 
+var announced=1; 
+
+function tick(event)
+{
+//some mathemagics
+
+datetime=event.npc.world.getTotalTime(); //this variable counts MC ticks
+time=datetime % 24000;
+minutes=time % 1000;
+hours=(time-minutes)/1000;
+day=(datetime-time)/24000;
+day_of_week=day % 7;
+day_name=days[day_of_week];
+week=(day-day_of_week)/7;
+day_of_year=day % 365;
+year=(day-day_of_year) / 365;
+
+month=0;
+day_of_month=0;
+month_name="";
+
+do
+  {
+  if (month==0)
+    day_of_month=day_of_year;
+  else
+    {
+    day_of_month=day_of_year-d[month-1];
+    }
+  
+  month_name=months[month];
+  month+=1;
+  }
+while (day_of_year>d[month-1]);
+
+//add 1, week 0 and year 0 just sound silly
+week+=1;
+year+=1;
+
+minutes=Math.floor((minutes/1000)*60);
+
+mm=""+minutes;
+hh=""+hours;
+
+if (mm<10) //simple zerofill
+  mm="0"+mm;
+
+if (hh<10)
+  hh="0"+hh;  
+
+//synchronise the minecraft clock and announce.
+
+//first, reset the "announced" var
+if (minutes==59)
+  {
+  announced=0;
+  }
+
+//every hour, when minutes counter reaches 0 - but only once per "minute"!
+if (announced==0 && minutes==0)
+  {
+  var tt=(time+18000) % 24000;; //apparent time, since 0 = "6 o clock morning"
+  
+  event.npc.executeCommand('/time set '+tt);
+  event.npc.world.broadcast('[The time is now §l§e'+hh+':'+mm+'§r]');
+  announced=1;
+  }
+
+//now set worldtempdata. All npcs, blocks, scripted doors will have access
+//to it - anytime, anywhere.
+//PROVIDED YOU REMEMBERED TO SET ROLE OF THE NPC RUNNING THIS CODE TO
+//"CHUNKLOADER"!
+ 
+event.npc.world.getTempdata().put("minutes",minutes);
+event.npc.world.getTempdata().put("hours",hours);
+event.npc.world.getTempdata().put("day_of_week",day_of_week);
+event.npc.world.getTempdata().put("day_name",day_name);
+event.npc.world.getTempdata().put("day_of_month",day_of_month);
+event.npc.world.getTempdata().put("month",month);
+event.npc.world.getTempdata().put("month_name",month_name);
+event.npc.world.getTempdata().put("year",year);
+}
+
+//you don't need this bit, it's just for testing purposes
+
+function interact(event)
+{
+event.npc.say('The time is: '+hh+':'+mm+'\nToday is '+day_name+', consecutive day '+day+' (week '+week+'). In other words, '+day_of_month+' '+month_name+', year '+year);
+
+event.setCanceled(true);
+}
